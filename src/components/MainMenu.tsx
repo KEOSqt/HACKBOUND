@@ -17,9 +17,9 @@ export function MainMenu({ onStartGame, onStartTutorial }: P) {
         <div className="cc-how">
           🔴 <b>RED</b>: Scan → Exploit → Escalate → Exfiltrate &nbsp;·&nbsp;
           🔵 <b>BLUE</b>: Prevent → Detect → Respond &nbsp;·&nbsp;
-          ⚡ 3 energy/turn &nbsp;·&nbsp; 🎯 click a card, then a glowing target
+          ⚡ 6 max energy &nbsp;·&nbsp; 🎯 click a card, then a glowing target &nbsp;·&nbsp; ◆ RED needs 3 data in 06:00
         </div>
-        <div className="cc-meta"><span>◉ 2 PLAYERS</span><span>◉ 5–10 MIN</span><span>◉ CYBERSECURITY BATTLE</span></div>
+        <div className="cc-meta"><span>◉ 2 PLAYERS</span><span>◉ 6 MIN</span><span>◉ CYBERSECURITY BATTLE</span></div>
       </div>
     </div>
   );

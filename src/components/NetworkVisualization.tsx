@@ -1,5 +1,6 @@
 import React from 'react';
 import type { NetworkNode, NetworkNodeType, ChainLink } from '../game/types';
+import { POS, LABELS, slotFor } from '../data/battlefieldLayout';
 
 interface Props {
   network: NetworkNode[];
@@ -10,17 +11,7 @@ interface Props {
   onNodeClick?: (nodeId: string) => void;
 }
 
-const POS: Record<string, { x: number; y: number }> = {
-  internet: { x: 50, y: 9 },
-  firewall: { x: 50, y: 24 },
-  web_server: { x: 24, y: 46 },
-  app_server: { x: 50, y: 46 },
-  database: { x: 76, y: 46 },
-  endpoint: { x: 24, y: 74 },
-  monitoring: { x: 50, y: 74 },
-  auth_server: { x: 76, y: 74 },
-  sensitive_data: { x: 50, y: 90 },
-};
+
 
 const EDGES: Array<[string, string]> = [
   ['internet', 'firewall'],
@@ -42,10 +33,7 @@ const ICONS: Record<NetworkNodeType, string> = {
   INTERNET: '🌐', FIREWALL: '🛡️', WEB_SERVER: '🖥️', APP_SERVER: '⚙️',
   AUTH_SERVER: '🔐', DATABASE: '🗄️', SENSITIVE_DATA: '💎', MONITORING: '📡', ENDPOINT: '💻',
 };
-const LABELS: Record<NetworkNodeType, string> = {
-  INTERNET: 'INTERNET', FIREWALL: 'FIREWALL', WEB_SERVER: 'WEB SERVER', APP_SERVER: 'APPLICATION SERVER',
-  AUTH_SERVER: 'AUTH SERVER', DATABASE: 'DATABASE', SENSITIVE_DATA: 'SENSITIVE DATA', MONITORING: 'INTERNAL SERVER', ENDPOINT: 'ENDPOINTS',
-};
+
 const COLORS: Record<string, string> = {
   SECURE: '#00f0a0', SCANNED: '#22c8ff', VULNERABLE: '#ffb02e',
   COMPROMISED: '#ff2d55', ISOLATED: '#b06bff', OFFLINE: '#5b6b82',
@@ -76,10 +64,13 @@ export function NetworkVisualization({ network, validTargets, responseChain, onN
   }, [responseChain.length]);
 
   const P = (id: string) => {
-    const p = POS[id] || { x: 50, y: 50 };
+    // Unknown ids (decoys) get a stable bottom-edge slot — never the center.
+    const p = POS[id] || slotFor(id);
     return { x: (p.x / 100) * dim.w, y: (p.y / 100) * dim.h };
   };
   const byId = (id: string) => network.find(n => n.id === id);
+  const hasSel = validTargets.length > 0;
+  const halo = { paintOrder: 'stroke', stroke: '#04070f', strokeWidth: 4 } as const;
 
   return (
     <div ref={ref} style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -91,10 +82,11 @@ export function NetworkVisualization({ network, validTargets, responseChain, onN
           const hot = responseChain.some(l => (l.targetId === a || l.targetId === b));
           const cold = A.defenses.some(d => d.includes('block')) || B.defenses.some(d => d.includes('block'));
           const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2 - 14;
+          const touchesTarget = validTargets.includes(a) || validTargets.includes(b);
           return (
-            <g key={i}>
+            <g key={i} opacity={hasSel && !touchesTarget && !hot ? 0.35 : 1}>
               <path d={`M${p1.x},${p1.y} Q${mx},${my} ${p2.x},${p2.y}`}
-                fill="none" className={`bf-edge flow ${hot ? 'hot' : ''} ${cold ? 'cold' : ''}`} />
+                fill="none" className={`bf-edge flow ${hot || (hasSel && touchesTarget) ? 'hot' : ''} ${cold ? 'cold' : ''}`} />
             </g>
           );
         })}
@@ -106,9 +98,13 @@ export function NetworkVisualization({ network, validTargets, responseChain, onN
           return (
             <g key={node.id}
               className={`bf-node ${isT ? 'target' : ''} ${flash === node.id ? 'hit' : ''}`}
+              opacity={hasSel && !isT ? 0.4 : 1}
               onClick={() => { if (isT && onNodeClick) onNodeClick(node.id); }}
               style={{ cursor: isT ? 'pointer' : 'default' }}>
-              {isT && <circle cx={p.x} cy={p.y} r={R + 10} className="bf-pulse" stroke="#ffb02e" strokeDasharray="6 5" />}
+              {isT && <circle cx={p.x} cy={p.y} r={R + 10} className="bf-pulse" stroke="#ffb02e" strokeWidth={3} strokeDasharray="none" />}
+              {isT && (
+                <text x={p.x} y={p.y - R - 14} className="bf-tag" fill="#ffb02e" style={halo}>▼ TARGET</text>
+              )}
               <circle cx={p.x} cy={p.y} r={R + 6} fill="none" stroke={c} strokeOpacity=".25" strokeWidth={5} />
               <circle cx={p.x} cy={p.y} r={R} className="bf-ring" stroke={c} style={{ filter: `drop-shadow(0 0 10px ${c})` }} />
               <circle cx={p.x} cy={p.y} r={R - 7} className="bf-core" />
@@ -116,8 +112,8 @@ export function NetworkVisualization({ network, validTargets, responseChain, onN
               {node.status === 'COMPROMISED' && (
                 <circle cx={p.x + R - 8} cy={p.y - R + 8} r={8} fill="#ff2d55" stroke="#fff" strokeWidth={1.5} />
               )}
-              <text x={p.x} y={p.y + R + 15} className="bf-lbl" fill={c}>{LABELS[node.type]}</text>
-              <text x={p.x} y={p.y + R + 26} className="bf-sub" fill={c} opacity={.75}>
+              <text x={p.x} y={p.y + R + 15} className="bf-lbl" fill={c} style={halo}>{LABELS[node.type]}</text>
+              <text x={p.x} y={p.y + R + 26} className="bf-sub" fill={c} opacity={.75} style={halo}>
                 {node.status === 'COMPROMISED' ? `◆ ${node.compromiseLevel}/${node.maxCompromise}` : `○ ${node.status}`}
               </text>
             </g>

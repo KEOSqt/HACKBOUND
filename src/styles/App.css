@@ -79,6 +79,23 @@ button{font-family:inherit}
 .cc-side.red .cc-cardrow.sel{border-color:var(--red);box-shadow:0 0 0 1px var(--red),0 0 18px #ff2d5566;background:linear-gradient(180deg,#2b1220,#160a12)}
 .cc-side.blue .cc-cardrow.sel{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue),0 0 18px #22c8ff66;background:linear-gradient(180deg,#0e2a3d,#0a1626)}
 .cc-cardrow.off{opacity:.45;cursor:not-allowed}
+.cc-cardrow.blocked{border-color:#7a4a12;cursor:pointer}
+.cc-side.red .cc-cardrow.blocked{box-shadow:inset 0 0 18px #ffb02e14}
+.cc-side.blue .cc-cardrow.blocked{box-shadow:inset 0 0 18px #ffb02e14}
+.cc-cardrow .why{display:block;font-family:'JetBrains Mono';font-size:9px;letter-spacing:.5px;color:#ffd9a0;margin-top:3px;line-height:1.4}
+.bf-hint.warn{border-color:var(--red);color:#ffb3c1;background:#220a12ee;box-shadow:0 0 16px #ff2d5544}
+.cc-cardrow.ready{border-color:var(--grn);animation:ready 1.8s ease-in-out infinite}
+@keyframes ready{0%,100%{box-shadow:0 0 0 rgba(0,240,160,0)}50%{box-shadow:0 0 14px rgba(0,240,160,.45)}}
+.cc-cardrow.shake{animation:deny .4s ease}
+@keyframes deny{0%,100%{transform:none}25%{transform:translateX(-5px)}55%{transform:translateX(4px)}80%{transform:translateX(-2px)}}
+.coach{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 14px 6px;padding:7px 14px;background:linear-gradient(180deg,#0c1830,#080f22);border:1px solid var(--line2);cursor:pointer;z-index:2}
+.coach-next{font-family:'JetBrains Mono';font-size:11.5px;letter-spacing:1px;color:#ffe9c4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.coach-stages{display:flex;gap:6px;flex:0 0 auto}
+.cst{font-family:'JetBrains Mono';font-size:9px;letter-spacing:1.5px;padding:3px 9px;border:1px solid var(--line)}
+.cst.todo{color:var(--dim)}
+.cst.done{color:var(--grn);border-color:var(--grn)}
+.cst.now{color:#1a1005;background:var(--amb);border-color:var(--amb);font-weight:700}
+.cc-log ul li{white-space:normal;overflow:visible;text-overflow:clip;word-break:break-word;line-height:1.5}
 .cc-ico{width:44px;height:44px;display:grid;place-items:center;font-size:21px;border:1px solid var(--line2);background:#060c1c}
 .cc-side.red .cc-ico{border-color:#ff2d5555;color:#ffb3c1}
 .cc-side.blue .cc-ico{border-color:#22c8ff55;color:#bdefff}
@@ -145,8 +162,9 @@ button{font-family:inherit}
 .st{font-weight:700}
 
 /* card detail popover */
-.cc-detail{position:absolute;z-index:20;width:300px;background:linear-gradient(180deg,#0e1a36,#080f22);border:1px solid var(--line2);box-shadow:0 18px 50px #000c;left:50%;bottom:210px;transform:translateX(-50%);padding:14px;animation:pop .18s ease}
-@keyframes pop{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1}}
+.cc-detail{position:absolute;z-index:20;width:300px;max-width:calc(100% - 24px);max-height:calc(100% - 56px);overflow-y:auto;background:linear-gradient(180deg,#0e1a36,#080f22);border:1px solid var(--line2);box-shadow:0 18px 50px #000c;left:12px;bottom:12px;padding:14px;animation:pop .18s ease}
+@keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+.bf-tag{font-family:'JetBrains Mono';font-size:10px;font-weight:700;letter-spacing:2px;text-anchor:middle;pointer-events:none}
 .cc-detail.red{border-color:var(--red)}.cc-detail.blue{border-color:var(--blue)}
 .cc-detail h3{font-size:18px}
 .cc-detail .cat{font-family:'JetBrains Mono';font-size:9px;letter-spacing:2px;color:var(--amb)}

@@ -6,7 +6,7 @@ export const RED_CARDS: Card[] = [
     id: 'red_net_scan',
     name: 'Network Scan',
     team: 'RED',
-    category: 'RECONNAISSANCE',
+    category: 'RECON',
     cost: 1,
     description: 'Discover all directly connected network nodes.',
     educationalDescription: 'Network scanning identifies live hosts, open ports, and services on a network. It\'s typically the first step in reconnaissance.',
@@ -25,7 +25,7 @@ export const RED_CARDS: Card[] = [
     id: 'red_port_scan',
     name: 'Port Scan',
     team: 'RED',
-    category: 'RECONNAISSANCE',
+    category: 'RECON',
     cost: 1,
     description: 'Deep scan a discovered node to find vulnerabilities.',
     educationalDescription: 'Port scanning probes specific ports on a target to identify running services and potential entry points.',
@@ -44,7 +44,7 @@ export const RED_CARDS: Card[] = [
     id: 'red_vuln_scan',
     name: 'Vulnerability Scan',
     team: 'RED',
-    category: 'RECONNAISSANCE',
+    category: 'RECON',
     cost: 2,
     description: 'Automated scan that reveals all weaknesses in a network segment.',
     educationalDescription: 'Vulnerability scanners automatically identify known security flaws (CVEs) in systems and applications.',
@@ -63,7 +63,7 @@ export const RED_CARDS: Card[] = [
     id: 'red_service_enum',
     name: 'Service Enumeration',
     team: 'RED',
-    category: 'RECONNAISSANCE',
+    category: 'RECON',
     cost: 2,
     description: 'Detailed analysis of a vulnerable service to plan exploitation.',
     educationalDescription: 'Service enumeration gathers detailed information about a specific service version and configuration to find exploit paths.',
@@ -94,7 +94,9 @@ export const RED_CARDS: Card[] = [
       target: 'NODE',
       nodeType: 'ENDPOINT',
       value: 2,
-      description: 'Compromise an ENDPOINT node directly. Bypasses FIREWALL.'
+      damage: 5,
+      chainable: true,
+      description: 'Compromise an ENDPOINT node directly. Bypasses FIREWALL. Deals 5 damage to BLUE.'
     },
     targetType: 'NODE',
     icon: '🎣',
@@ -114,7 +116,9 @@ export const RED_CARDS: Card[] = [
       target: 'NODE',
       nodeType: 'AUTH_SERVER',
       value: 3,
-      description: 'Attempt to compromise AUTH_SERVER. Blocked if MFA active.'
+      damage: 10,
+      chainable: true,
+      description: 'Attempt to compromise AUTH_SERVER. Blocked if MFA active. Deals 10 damage to BLUE.'
     },
     targetType: 'NODE',
     icon: '🔑',
@@ -134,7 +138,9 @@ export const RED_CARDS: Card[] = [
       target: 'NODE',
       nodeType: 'WEB_SERVER',
       value: 3,
-      description: 'Compromise a VULNERABLE WEB_SERVER. Creates foothold.'
+      damage: 10,
+      chainable: true,
+      description: 'Compromise a VULNERABLE WEB_SERVER. Creates foothold. Deals 10 damage to BLUE.'
     },
     targetType: 'NODE',
     icon: '🌐',
@@ -146,7 +152,7 @@ export const RED_CARDS: Card[] = [
     id: 'red_sql_injection',
     name: 'SQL Injection',
     team: 'RED',
-    category: 'EXPLOITATION',
+    category: 'EXPLOIT',
     cost: 3,
     description: 'Inject malicious SQL to manipulate database queries.',
     educationalDescription: 'SQL injection occurs when user input is improperly sanitized, allowing attackers to execute arbitrary database commands. Parameterized queries prevent this.',
@@ -159,7 +165,9 @@ export const RED_CARDS: Card[] = [
       target: 'NODE',
       nodeType: 'DATABASE',
       value: 4,
-      description: 'Compromise DATABASE through compromised WEB_SERVER. Blocked by WAF.'
+      damage: 20,
+      chainable: true,
+      description: 'Compromise DATABASE through compromised WEB_SERVER. Blocked by WAF. Deals 20 damage to BLUE.'
     },
     targetType: 'NODE',
     icon: '💉',
@@ -169,7 +177,7 @@ export const RED_CARDS: Card[] = [
     id: 'red_xss',
     name: 'Cross-Site Scripting (XSS)',
     team: 'RED',
-    category: 'EXPLOITATION',
+    category: 'EXPLOIT',
     cost: 2,
     description: 'Inject malicious scripts into trusted web pages.',
     educationalDescription: 'XSS allows attackers to execute scripts in victims\' browsers. It can steal sessions, deface sites, or deliver malware. Content Security Policy mitigates this.',
@@ -179,7 +187,9 @@ export const RED_CARDS: Card[] = [
       target: 'NODE',
       nodeType: 'ENDPOINT',
       value: 2,
-      description: 'Compromise ENDPOINT via compromised WEB_SERVER. Steals session tokens.'
+      damage: 10,
+      chainable: true,
+      description: 'Compromise ENDPOINT via compromised WEB_SERVER. Steals session tokens. Deals 10 damage to BLUE.'
     },
     targetType: 'NODE',
     icon: '📜',
@@ -189,7 +199,7 @@ export const RED_CARDS: Card[] = [
     id: 'red_cmd_injection',
     name: 'Command Injection',
     team: 'RED',
-    category: 'EXPLOITATION',
+    category: 'EXPLOIT',
     cost: 3,
     description: 'Execute arbitrary system commands through vulnerable input.',
     educationalDescription: 'Command injection occurs when applications pass unsanitized user input to system shells. It provides direct OS-level access.',
@@ -199,7 +209,9 @@ export const RED_CARDS: Card[] = [
       target: 'NODE',
       nodeType: 'APP_SERVER',
       value: 4,
-      description: 'Fully compromise APP_SERVER. Grants system-level access.'
+      damage: 20,
+      chainable: true,
+      description: 'Fully compromise APP_SERVER. Grants system-level access. Deals 20 damage to BLUE.'
     },
     targetType: 'NODE',
     icon: '💻',
@@ -209,7 +221,7 @@ export const RED_CARDS: Card[] = [
     id: 'red_rce',
     name: 'Remote Code Execution',
     team: 'RED',
-    category: 'EXPLOITATION',
+    category: 'EXPLOIT',
     cost: 5,
     description: 'Achieve full remote control over a vulnerable system.',
     educationalDescription: 'RCE vulnerabilities allow attackers to execute arbitrary code on a target machine. They are among the most severe vulnerabilities (CVSS 9-10).',
@@ -218,7 +230,9 @@ export const RED_CARDS: Card[] = [
       type: 'COMPROMISE',
       target: 'NODE',
       value: 5,
-      description: 'Fully compromise any VULNERABLE node. Maximum impact.'
+      damage: 30,
+      chainable: true,
+      description: 'Fully compromise any VULNERABLE node. Maximum impact. Deals 30 damage to BLUE.'
     },
     targetType: 'NODE',
     icon: '☠️',
@@ -239,7 +253,8 @@ export const RED_CARDS: Card[] = [
       type: 'COMPROMISE',
       target: 'NODE',
       value: 2,
-      description: 'Increase compromise level of a COMPROMISED node by 2. Unlocks lateral movement.'
+      damage: 15,
+      description: 'Increase compromise level of a COMPROMISED node by 2. Unlocks lateral movement. Deals 15 damage to BLUE.'
     },
     targetType: 'NODE',
     icon: '⬆️',
@@ -258,7 +273,8 @@ export const RED_CARDS: Card[] = [
       type: 'DRAW',
       target: 'PLAYER',
       value: 2,
-      description: 'Draw 2 cards. Compromised node gains +1 compromise level.'
+      damage: 15,
+      description: 'Draw 2 cards. Compromised node gains +1 compromise level. Deals 15 damage to BLUE.'
     },
     targetType: 'NONE',
     icon: '💾',
@@ -301,7 +317,9 @@ export const RED_CARDS: Card[] = [
       type: 'COMPROMISE',
       target: 'NODE',
       value: 3,
-      description: 'Compromise adjacent node without scanning. Requires Credential Dumping.'
+      damage: 10,
+      chainable: true,
+      description: 'Compromise adjacent node without scanning. Requires Credential Dumping. Deals 10 damage to BLUE.'
     },
     targetType: 'NODE',
     icon: '🔐',
@@ -320,7 +338,9 @@ export const RED_CARDS: Card[] = [
       type: 'COMPROMISE',
       target: 'NODE',
       value: 3,
-      description: 'Compromise connected node. Blocked by network segmentation.'
+      damage: 10,
+      chainable: true,
+      description: 'Compromise connected node. Blocked by network segmentation. Deals 10 damage to BLUE.'
     },
     targetType: 'NODE',
     icon: '🔗',
@@ -349,25 +369,28 @@ export const RED_CARDS: Card[] = [
     color: '#aa00ff'
   },
 
-  // IMPACT
+  // EXFILTRATION
   {
     id: 'red_data_exfil',
     name: 'Data Exfiltration',
     team: 'RED',
-    category: 'IMPACT',
-    cost: 6,
+    category: 'EXFILTRATION',
+    cost: 4,
     description: 'Steal sensitive data from compromised database.',
     educationalDescription: 'Data exfiltration is the unauthorized transfer of data. DLP, encryption, and egress monitoring detect and prevent large data transfers.',
     requirements: [
       { type: 'NODE_STATUS', status: 'COMPROMISED', nodeType: 'DATABASE' },
-      { type: 'ENERGY_MIN', value: 6 }
+      { type: 'NO_ACTIVE_BLOCK', nodeType: 'DATABASE' }
     ],
     effect: {
       type: 'EXFILTRATE',
       target: 'NODE',
       nodeType: 'SENSITIVE_DATA',
-      value: 100,
-      description: 'WIN CONDITION: Exfiltrate SENSITIVE_DATA. Game ends immediately.'
+      value: 1,
+      damage: 10,
+      grantsToken: true,
+      chainable: true,
+      description: 'HIGH RISK: steal from SENSITIVE_DATA for +1 Data Token (3 wins). Deals 10 damage to BLUE. Blue may respond.'
     },
     targetType: 'NODE',
     icon: '📤',
@@ -386,7 +409,9 @@ export const RED_CARDS: Card[] = [
       type: 'DAMAGE',
       target: 'NODE',
       value: 3,
-      description: 'Set node status to OFFLINE for 2 turns. Reduces network integrity by 15%.'
+      damage: 30,
+      chainable: true,
+      description: 'Set node status to OFFLINE for 2 turns. Reduces network integrity by 15%. Deals 30 damage to BLUE.'
     },
     targetType: 'NODE',
     icon: '🌊',
@@ -408,7 +433,9 @@ export const RED_CARDS: Card[] = [
       type: 'DESTROY',
       target: 'NODE',
       value: 5,
-      description: 'Set node to OFFLINE permanently. Reduces network integrity by 25%. Draw 2 cards.'
+      damage: 40,
+      chainable: true,
+      description: 'Set node to OFFLINE permanently. Reduces network integrity by 25%. Draw 2 cards. Deals 40 damage to BLUE.'
     },
     targetType: 'NODE',
     icon: '🔒',
@@ -418,7 +445,7 @@ export const RED_CARDS: Card[] = [
     id: 'red_zero_day',
     name: 'Zero-Day Exploit',
     team: 'RED',
-    category: 'EXPLOITATION',
+    category: 'EXPLOIT',
     cost: 6,
     description: 'Exploit an unknown vulnerability with no patch available.',
     educationalDescription: 'Zero-days are vulnerabilities unknown to vendors. They are extremely valuable and rare. Defense-in-depth is the only mitigation.',
@@ -427,7 +454,9 @@ export const RED_CARDS: Card[] = [
       type: 'COMPROMISE',
       target: 'NODE',
       value: 5,
-      description: 'Compromise any SECURE node directly. Cannot be blocked by PATCH.'
+      damage: 45,
+      chainable: true,
+      description: 'Compromise any SECURE node directly. Cannot be blocked by PATCH. Deals 45 damage to BLUE.'
     },
     targetType: 'NODE',
     icon: '💎',
@@ -437,7 +466,7 @@ export const RED_CARDS: Card[] = [
     id: 'red_exploit_chain',
     name: 'Exploit Chain',
     team: 'RED',
-    category: 'EXPLOITATION',
+    category: 'EXPLOIT',
     cost: 4,
     description: 'Combine multiple vulnerabilities for greater impact.',
     educationalDescription: 'Exploit chains combine multiple lower-severity vulnerabilities to achieve high impact. Each link must be patched to break the chain.',
@@ -449,7 +478,9 @@ export const RED_CARDS: Card[] = [
       type: 'COMPROMISE',
       target: 'NODE',
       value: 4,
-      description: 'Compromise VULNERABLE node. If target is WEB_SERVER, also compromise APP_SERVER.'
+      damage: 25,
+      chainable: true,
+      description: 'Compromise VULNERABLE node. If target is WEB_SERVER, also compromise APP_SERVER. Deals 25 damage to BLUE.'
     },
     targetType: 'NODE',
     icon: '⛓️',
@@ -459,7 +490,7 @@ export const RED_CARDS: Card[] = [
     id: 'red_persistence',
     name: 'Establish Persistence',
     team: 'RED',
-    category: 'PRIVILEGE_ESCALATION',
+    category: 'PERSISTENCE',
     cost: 2,
     description: 'Maintain access across reboots and remediation.',
     educationalDescription: 'Persistence mechanisms (scheduled tasks, registry keys, services) survive reboots. File integrity monitoring and immutable infrastructure detect this.',
@@ -487,7 +518,9 @@ export const RED_CARDS: Card[] = [
       type: 'COMPROMISE',
       target: 'NODE',
       value: 2,
-      description: 'Increase compromise by 2. Node cannot be ISOLATED for 2 turns.'
+      damage: 25,
+      chainable: true,
+      description: 'Increase compromise by 2. Node cannot be ISOLATED for 2 turns. Deals 25 damage to BLUE.'
     },
     targetType: 'NODE',
     icon: '🦠',

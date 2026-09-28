@@ -1,16 +1,19 @@
 export type Team = 'RED' | 'BLUE';
 export type GamePhase = 'MAIN_MENU' | 'GAME_SETUP' | 'TUTORIAL' | 'RED_TURN' | 'BLUE_TURN' | 'RESPONSE_WINDOW' | 'CARD_RESOLUTION' | 'GAME_OVER';
-export type CardCategory = 
-  | 'RECONNAISSANCE' 
-  | 'INITIAL_ACCESS' 
-  | 'EXPLOITATION' 
-  | 'PRIVILEGE_ESCALATION' 
-  | 'LATERAL_MOVEMENT' 
+export type CardCategory =
+  | 'RECON'
+  | 'INITIAL_ACCESS'
+  | 'EXPLOIT'
+  | 'PRIVILEGE_ESCALATION'
+  | 'LATERAL_MOVEMENT'
+  | 'PERSISTENCE'
   | 'IMPACT'
-  | 'PREVENTION' 
-  | 'DETECTION' 
-  | 'RESPONSE' 
-  | 'RECOVERY' 
+  | 'EXFILTRATION'
+  | 'PREVENTION'
+  | 'DETECTION'
+  | 'RESPONSE'
+  | 'CONTAINMENT'
+  | 'RECOVERY'
   | 'DECEPTION';
 export type NetworkNodeType = 'INTERNET' | 'FIREWALL' | 'WEB_SERVER' | 'APP_SERVER' | 'AUTH_SERVER' | 'DATABASE' | 'SENSITIVE_DATA' | 'MONITORING' | 'ENDPOINT';
 export type NodeStatus = 'SECURE' | 'SCANNED' | 'VULNERABLE' | 'COMPROMISED' | 'ISOLATED' | 'OFFLINE';
@@ -32,7 +35,7 @@ export interface Card {
 }
 
 export interface Requirement {
-  type: 'NODE_STATUS' | 'NODE_COMPROMISED' | 'HAS_CARD' | 'ENERGY_MIN' | 'TURN_MIN';
+  type: 'NODE_STATUS' | 'NODE_COMPROMISED' | 'HAS_CARD' | 'ENERGY_MIN' | 'TURN_MIN' | 'NO_ACTIVE_BLOCK';
   nodeType?: NetworkNodeType;
   status?: NodeStatus;
   cardId?: string;
@@ -44,6 +47,10 @@ export interface Effect {
   target?: TargetType;
   nodeType?: NetworkNodeType;
   value?: number;
+  /** HP damage dealt to the opposing team when this effect resolves. */
+  damage?: number;
+  /** EXFILTRATE only: grants +1 Data Token to RED on success. */
+  grantsToken?: boolean;
   duration?: number;
   chainable?: boolean;
   description: string;
@@ -62,6 +69,15 @@ export interface NetworkNode {
   isCritical: boolean;
 }
 
+export interface PlayerStats {
+  successfulAttacks: number;
+  systemsCompromised: number;
+  dataStolen: number;
+  attacksBlocked: number;
+  systemsSecured: number;
+  exfilBlocked: number;
+}
+
 export interface PlayerState {
   team: Team;
   deck: Card[];
@@ -72,7 +88,15 @@ export interface PlayerState {
   maxEnergy: number;
   networkIntegrity: number;
   score: number;
+  hp: number;
+  maxHp: number;
+  /** RED only: successful data exfiltrations (0-3). */
+  dataTokens: number;
+  stats: PlayerStats;
 }
+
+export const MAX_DATA_TOKENS = 3;
+export const MATCH_DURATION_MS = 6 * 60 * 1000;
 
 export interface GameState {
   phase: GamePhase;
@@ -85,6 +109,10 @@ export interface GameState {
   responseWindowActive: boolean;
   responseWindowTimer: number;
   winner: Team | null;
+  winReason: string | null;
+  timeLeftMs: number;
+  matchDurationMs: number;
+  timerRunning: boolean;
   log: LogEntry[];
   selectedCard: Card | null;
   validTargets: string[];

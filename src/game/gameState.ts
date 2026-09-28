@@ -1,4 +1,5 @@
-import type { GameState, PlayerState, NetworkNode, Team, GamePhase, Card, LogEntry, ChainLink } from './types';
+import type { GameState, PlayerState, PlayerStats, NetworkNode, Team, GamePhase, Card, LogEntry, ChainLink } from './types';
+import { MATCH_DURATION_MS, MAX_DATA_TOKENS } from './types';
 import { createNetwork } from '../data/network';
 import { createDecks } from './deck';
 import { getNode as getNodeUtil, getConnectedNodes as getConnectedNodesUtil } from '../data/network';
@@ -22,6 +23,14 @@ export function createInitialGameState(): GameState {
   const redDrawn = red.slice(0, 5);
   const blueDrawn = blue.slice(0, 5);
   
+  const freshStats = (): PlayerStats => ({
+    successfulAttacks: 0,
+    systemsCompromised: 0,
+    dataStolen: 0,
+    attacksBlocked: 0,
+    systemsSecured: 0,
+    exfilBlocked: 0
+  });
   return {
     phase: 'MAIN_MENU',
     currentTurn: 'RED',
@@ -32,10 +41,14 @@ export function createInitialGameState(): GameState {
       hand: redDrawn,
       discard: [],
       activeCards: [],
-      energy: 3,
-      maxEnergy: 3,
+      energy: 4,
+      maxEnergy: 6,
       networkIntegrity: 100,
-      score: 0
+      score: 0,
+      hp: 100,
+      maxHp: 100,
+      dataTokens: 0,
+      stats: freshStats()
     },
     bluePlayer: {
       team: 'BLUE',
@@ -43,16 +56,24 @@ export function createInitialGameState(): GameState {
       hand: blueDrawn,
       discard: [],
       activeCards: [],
-      energy: 3,
-      maxEnergy: 3,
+      energy: 4,
+      maxEnergy: 6,
       networkIntegrity: 100,
-      score: 0
+      score: 0,
+      hp: 120,
+      maxHp: 120,
+      dataTokens: 0,
+      stats: freshStats()
     },
     network,
     responseChain: [],
     responseWindowActive: false,
     responseWindowTimer: 0,
     winner: null,
+    winReason: null,
+    timeLeftMs: MATCH_DURATION_MS,
+    matchDurationMs: MATCH_DURATION_MS,
+    timerRunning: false,
     log: [],
     selectedCard: null,
     validTargets: [],
@@ -148,8 +169,47 @@ export function incrementTurn(state: GameState): GameState {
   return { ...state, turnNumber: state.turnNumber + 1 };
 }
 
-export function setWinner(state: GameState, winner: Team | null): GameState {
-  return { ...state, winner, phase: 'GAME_OVER' };
+export function setWinner(state: GameState, winner: Team | null, reason: string | null = null): GameState {
+  return { ...state, winner, winReason: reason, phase: 'GAME_OVER', timerRunning: false };
+}
+
+/** Deal HP damage to a team, clamped at 0. Never negative. */
+export function damagePlayer(state: GameState, team: Team, amount: number): GameState {
+  const player = getPlayer(state, team);
+  const dmg = Math.max(0, Math.floor(amount));
+  if (dmg <= 0) return state;
+  return setPlayer(state, team, { ...player, hp: Math.max(0, player.hp - dmg) });
+}
+
+/** Grant a Data Token to RED, capped at MAX_DATA_TOKENS. */
+export function addDataToken(state: GameState): GameState {
+  const red = state.redPlayer;
+  if (red.dataTokens >= MAX_DATA_TOKENS) return state;
+  return setPlayer(state, 'RED', {
+    ...red,
+    dataTokens: red.dataTokens + 1,
+    stats: { ...red.stats, dataStolen: red.stats.dataStolen + 1 }
+  });
+}
+
+/** Increment a match statistic for a team. */
+export function bumpStat(state: GameState, team: Team, key: keyof PlayerStats, amount = 1): GameState {
+  const player = getPlayer(state, team);
+  return setPlayer(state, team, {
+    ...player,
+    stats: { ...player.stats, [key]: player.stats[key] + amount }
+  });
+}
+
+/** Advance the match clock. Returns { state, expired }. Never goes negative. */
+export function tickMatchTimer(state: GameState, deltaMs: number): { state: GameState; expired: boolean } {
+  if (!state.timerRunning || state.winner || state.phase === 'GAME_OVER') return { state, expired: false };
+  const left = Math.max(0, state.timeLeftMs - Math.max(0, deltaMs));
+  return { state: { ...state, timeLeftMs: left }, expired: left <= 0 };
+}
+
+export function startMatchTimer(state: GameState): GameState {
+  return { ...state, timerRunning: true };
 }
 
 export function selectCard(state: GameState, card: Card | null): GameState {

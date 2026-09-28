@@ -7,7 +7,7 @@ export * from './turnManager';
 
 import type { GameState, Card } from './types';
 import { createInitialGameState } from './gameState';
-import { startGame, startTutorial, playCard, respondToCard, passResponse, endTurn, skipTutorial, restartGame, updateResponseTimer } from './turnManager';
+import { startGame, startTutorial, playCard, respondToCard, passResponse, endTurn, skipTutorial, restartGame, updateResponseTimer, tickMatchClock } from './turnManager';
 import { getValidTargets, canPlayCard } from './rules';
 
 export class GameEngine {
@@ -78,9 +78,13 @@ export class GameEngine {
 
   selectCard(card: Card | null): void {
     this.setState({ ...this.state, selectedCard: card });
-    
+
     if (card) {
-      const targets = getValidTargets(this.state, this.state.currentTurn, card);
+      // Honest highlighting: nodes light up only when the card's requirements
+      // are actually met. Otherwise the UI shows the blocker instead of
+      // baiting a click that the engine would reject.
+      const playable = canPlayCard(this.state, this.state.currentTurn, card).valid;
+      const targets = playable ? getValidTargets(this.state, this.state.currentTurn, card) : [];
       this.setState({ ...this.state, validTargets: targets });
     } else {
       this.setState({ ...this.state, validTargets: [] });
@@ -111,11 +115,16 @@ export class GameEngine {
     const loop = (time: number) => {
       const deltaTime = time - this.lastTime;
       this.lastTime = time;
-      
+
+      // The 6-minute match clock runs continuously during play (never paused
+      // for card interactions), alongside the 5s response-window countdown.
+      if (this.state.timerRunning) {
+        this.setState(tickMatchClock(this.state, deltaTime));
+      }
       if (this.state.responseWindowActive) {
         this.setState(updateResponseTimer(this.state, deltaTime));
       }
-      
+
       this.animationFrame = requestAnimationFrame(loop);
     };
     

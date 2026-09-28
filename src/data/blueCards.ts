@@ -191,7 +191,7 @@ export const BLUE_CARDS: Card[] = [
       type: 'REVEAL',
       target: 'NODE',
       value: 1,
-      description: 'Scan all nodes. Reveal compromise levels. Draw 1 card per COMPROMISED node found.'
+      description: 'Scan all nodes. Reveal compromise levels. Draw 1 card per COMPROMISED node found. Acts as DLP: playable as a response to DATA EXFILTRATION to block it.'
     },
     targetType: 'NONE',
     icon: '👁️',
@@ -211,7 +211,8 @@ export const BLUE_CARDS: Card[] = [
       target: 'NODE',
       nodeType: 'ENDPOINT',
       value: 4,
-      description: 'Secure ENDPOINT. Detect and block Malware, Credential Dumping, Persistence for 3 turns.'
+      damage: 10,
+      description: 'Secure ENDPOINT. Detect and block Malware, Credential Dumping, Persistence for 3 turns. Deals 10 damage to RED.'
     },
     targetType: 'NODE',
     icon: '🖥️',
@@ -230,7 +231,8 @@ export const BLUE_CARDS: Card[] = [
       type: 'REVEAL',
       target: 'PLAYER',
       value: 2,
-      description: 'Reveal all COMPROMISED nodes. Red loses 2 Energy. Draw 1 card.'
+      damage: 5,
+      description: 'Reveal all COMPROMISED nodes. Red loses 2 Energy. Draw 1 card. Deals 5 damage to RED.'
     },
     targetType: 'PLAYER',
     icon: '🔍',
@@ -242,7 +244,7 @@ export const BLUE_CARDS: Card[] = [
     id: 'blue_isolate',
     name: 'Isolate Host',
     team: 'BLUE',
-    category: 'RESPONSE',
+    category: 'CONTAINMENT',
     cost: 2,
     description: 'Disconnect compromised system from network.',
     educationalDescription: 'Network isolation (VLAN quarantine, host firewall) contains lateral movement. Automated isolation via EDR/SOAR reduces dwell time.',
@@ -261,7 +263,7 @@ export const BLUE_CARDS: Card[] = [
     id: 'blue_block_ip',
     name: 'Block IP Address',
     team: 'BLUE',
-    category: 'RESPONSE',
+    category: 'CONTAINMENT',
     cost: 1,
     description: 'Block malicious source IP at firewall.',
     educationalDescription: 'IP blocking stops known malicious sources. Threat intelligence feeds automate this. Attackers rotate IPs, so it\'s temporary.',
@@ -271,7 +273,8 @@ export const BLUE_CARDS: Card[] = [
       target: 'NODE',
       nodeType: 'FIREWALL',
       value: 2,
-      description: 'Block Red\'s current attack. Red loses 1 Energy. Attack fails.'
+      damage: 5,
+      description: 'Block Red\'s current attack. Red loses 1 Energy. Attack fails. Deals 5 damage to RED.'
     },
     targetType: 'NODE',
     icon: '🚫',
@@ -310,7 +313,8 @@ export const BLUE_CARDS: Card[] = [
       type: 'HEAL',
       target: 'NODE',
       value: 4,
-      description: 'Clean all COMPROMISED nodes. Restore 20% network integrity. Red skips next turn.'
+      damage: 15,
+      description: 'Clean all COMPROMISED nodes. Restore 20% network integrity. Red skips next turn. Deals 15 damage to RED.'
     },
     targetType: 'NONE',
     icon: '🚨',
@@ -329,7 +333,8 @@ export const BLUE_CARDS: Card[] = [
       type: 'COUNTER',
       target: 'CARD',
       value: 2,
-      description: 'Counter any Red card as response. Chainable. Red must pay +3 Energy to bypass.'
+      damage: 10,
+      description: 'Counter any Red card as response. Chainable. Red must pay +3 Energy to bypass. Deals 10 damage to RED.'
     },
     targetType: 'CARD',
     icon: '⚡',
@@ -390,7 +395,8 @@ export const BLUE_CARDS: Card[] = [
       type: 'DECOY',
       target: 'NODE',
       value: 2,
-      description: 'Create decoy node. If Red attacks it: reveal their hand, they lose 2 Energy, you draw 2 cards.'
+      damage: 5,
+      description: 'Create decoy node. If Red attacks it: reveal their hand, they lose 2 Energy, you draw 2 cards. Deals 5 damage to RED.'
     },
     targetType: 'NODE',
     icon: '🍯',

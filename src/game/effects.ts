@@ -1,20 +1,37 @@
 import type { GameState, Card, Team, NetworkNode, NodeStatus, Effect } from './types';
-import { 
+import { MAX_DATA_TOKENS } from './types';
+import {
   getPlayer, getOpponent, getNode, getConnectedNodes,
   updateNetworkNode, addLogEntry, spendEnergy, drawCard,
   gainEnergy, playCardFromHand, reduceNetworkIntegrity,
   increaseNetworkIntegrity, setPhase, setCurrentTurn,
-  incrementTurn, setWinner, clearResponseChain, setEnergy
+  incrementTurn, setWinner, clearResponseChain, setEnergy,
+  damagePlayer, addDataToken, bumpStat
 } from './gameState';
 import { calculateDamage } from './rules';
 
+function opponentOf(team: Team): Team {
+  return team === 'RED' ? 'BLUE' : 'RED';
+}
+
+/** Apply the card's HP damage to the opposing team (clamped, never negative). */
+function applyHpDamage(state: GameState, team: Team, card: Card): GameState {
+  const dmg = card.effect.damage ?? 0;
+  if (dmg <= 0) return state;
+  const foe = opponentOf(team);
+  let newState = damagePlayer(state, foe, dmg);
+  newState = addLogEntry(newState, team, `${card.name} deals ${dmg} damage to ${foe} (${newState[foe === 'RED' ? 'redPlayer' : 'bluePlayer'].hp} HP left)`, team === 'RED' ? 'compromise' : 'defense');
+  return newState;
+}
+
 export function resolveCardEffect(state: GameState, team: Team, card: Card, targetId: string): GameState {
+  if (state.winner || state.phase === 'GAME_OVER') return state;
   let newState = state;
-  
+
   newState = spendEnergy(newState, team, card.cost);
   newState = playCardFromHand(newState, team, card.id);
   newState = addLogEntry(newState, team, `played ${card.name}`, 'action');
-  
+
   const effect = card.effect;
   
   switch (effect.type) {
@@ -61,7 +78,10 @@ export function resolveCardEffect(state: GameState, team: Team, card: Card, targ
       newState = resolveDecoy(newState, team, card, targetId, effect);
       break;
   }
-  
+
+  // Centralized HP pressure: any card with effect.damage hits the opposing team.
+  newState = applyHpDamage(newState, team, card);
+
   return newState;
 }
 
@@ -122,30 +142,50 @@ function resolveCompromise(state: GameState, team: Team, card: Card, targetId: s
   });
   
   newState = addLogEntry(newState, team, `${targetNode.name} compromised (level ${newCompromise}/${targetNode.maxCompromise})`, 'compromise');
-  
+
+  if (team === 'RED') {
+    newState = bumpStat(newState, 'RED', 'successfulAttacks');
+    if (newStatus === 'COMPROMISED' && targetNode.status !== 'COMPROMISED') {
+      newState = bumpStat(newState, 'RED', 'systemsCompromised');
+    }
+  }
+
   if (newStatus === 'COMPROMISED') {
     newState = reduceNetworkIntegrity(newState, 10);
     newState = addLogEntry(newState, team, `Network integrity reduced to ${newState.redPlayer.networkIntegrity}%`, 'compromise');
   }
-  
+
   return newState;
 }
 
 function resolveExfiltrate(state: GameState, team: Team, _card: Card, targetId: string, _effect: Effect): GameState {
   const targetNode = getNode(state, targetId);
   if (!targetNode) return state;
-  
+
   let newState = state;
-  
-  if (targetNode.type === 'SENSITIVE_DATA' && targetNode.status === 'COMPROMISED') {
-    newState = updateNetworkNode(newState, targetId, { 
-      compromiseLevel: targetNode.maxCompromise,
-      status: 'COMPROMISED'
-    });
-    newState = addLogEntry(newState, team, 'SENSITIVE DATA EXFILTRATED! RED TEAM WINS!', 'win');
-    newState = setWinner(newState, 'RED');
+
+  // Only RED can exfiltrate, and only from compromised sensitive data.
+  // (Requirements + target validation enforce database compromise beforehand.)
+  if (team !== 'RED') return state;
+  if (targetNode.type !== 'SENSITIVE_DATA' || targetNode.status !== 'COMPROMISED') {
+    newState = addLogEntry(newState, team, 'Exfiltration failed — sensitive data is not compromised.', 'info');
+    return newState;
   }
-  
+  if (state.redPlayer.dataTokens >= MAX_DATA_TOKENS) return state;
+
+  newState = updateNetworkNode(newState, targetId, {
+    compromiseLevel: targetNode.maxCompromise,
+    status: 'COMPROMISED'
+  });
+  newState = addDataToken(newState);
+  const tokens = newState.redPlayer.dataTokens;
+  newState = bumpStat(newState, 'RED', 'successfulAttacks');
+  newState = addLogEntry(newState, team, `DATA EXFILTRATED! Data Token ${tokens}/${MAX_DATA_TOKENS}.`, 'win');
+
+  if (tokens >= MAX_DATA_TOKENS) {
+    newState = setWinner(newState, 'RED', 'DATA EXFILTRATED — 3/3 DATA TOKENS');
+  }
+
   return newState;
 }
 
@@ -161,7 +201,8 @@ function resolveBlock(state: GameState, team: Team, card: Card, targetId: string
   });
   
   newState = addLogEntry(newState, team, `${targetNode.name} fortified with ${card.name} (${duration} turns)`, 'defense');
-  
+  if (team === 'BLUE') newState = bumpStat(newState, 'BLUE', 'systemsSecured');
+
   return newState;
 }
 
@@ -178,7 +219,8 @@ function resolveIsolate(state: GameState, team: Team, _card: Card, targetId: str
   
   newState = addLogEntry(newState, team, `${targetNode.name} ISOLATED from network`, 'defense');
   newState = addLogEntry(newState, getOpponent(state, team).team, `Lost access to ${targetNode.name}`, 'info');
-  
+  if (team === 'BLUE') newState = bumpStat(newState, 'BLUE', 'systemsSecured');
+
   return newState;
 }
 
@@ -210,7 +252,8 @@ function resolveHeal(state: GameState, team: Team, _card: Card, targetId: string
     newState = increaseNetworkIntegrity(newState, 10);
     newState = addLogEntry(newState, team, `Network integrity restored to ${newState.redPlayer.networkIntegrity}%`, 'defense');
   }
-  
+  if (team === 'BLUE') newState = bumpStat(newState, 'BLUE', 'systemsSecured');
+
   return newState;
 }
 
@@ -251,7 +294,8 @@ function resolveDamage(state: GameState, team: Team, _card: Card, targetId: stri
   newState = reduceNetworkIntegrity(newState, 15);
   newState = addLogEntry(newState, team, `${targetNode.name} taken OFFLINE for ${duration} turns`, 'compromise');
   newState = addLogEntry(newState, team, `Network integrity reduced to ${newState.redPlayer.networkIntegrity}%`, 'compromise');
-  
+  if (team === 'RED') newState = bumpStat(newState, 'RED', 'successfulAttacks');
+
   return newState;
 }
 
@@ -280,6 +324,7 @@ function resolveCounter(state: GameState, team: Team, card: Card, _targetId: str
   let newState = state;
   
   newState = addLogEntry(newState, team, `Countered with ${card.name}!`, 'defense');
+  if (team === 'BLUE') newState = bumpStat(newState, 'BLUE', 'attacksBlocked');
   
   if (effect.value && effect.value > 0) {
     newState = addLogEntry(newState, team, `Attacker must pay +${effect.value} energy to bypass`, 'info');
@@ -302,6 +347,7 @@ function resolveDestroy(state: GameState, team: Team, card: Card, targetId: stri
   newState = reduceNetworkIntegrity(newState, 25);
   newState = addLogEntry(newState, team, `${targetNode.name} DESTROYED permanently`, 'compromise');
   newState = addLogEntry(newState, team, `Network integrity reduced to ${newState.redPlayer.networkIntegrity}%`, 'compromise');
+  if (team === 'RED') newState = bumpStat(newState, 'RED', 'successfulAttacks');
   
   if (card.id.startsWith('red_ransomware')) {
     newState = drawCard(newState, team, 2);
@@ -323,7 +369,8 @@ function resolvePatch(state: GameState, team: Team, _card: Card, targetId: strin
   
   newState = addLogEntry(newState, team, `${targetNode.name} PATCHED and secured`, 'defense');
   newState = increaseNetworkIntegrity(newState, 5);
-  
+  if (team === 'BLUE') newState = bumpStat(newState, 'BLUE', 'systemsSecured');
+
   return newState;
 }
 
@@ -437,14 +484,24 @@ export function processTurnEnd(state: GameState, team: Team): GameState {
 }
 
 export function checkWinCondition(state: GameState): Team | null {
-  const sensitiveData = state.network.find(n => n.type === 'SENSITIVE_DATA');
-  if (sensitiveData && sensitiveData.status === 'COMPROMISED' && sensitiveData.compromiseLevel >= sensitiveData.maxCompromise) {
-    return 'RED';
-  }
-  
-  if (state.redPlayer.networkIntegrity <= 0) {
-    return 'BLUE';
-  }
-  
+  if (state.winner) return state.winner;
+  // RED: 3 Data Tokens.
+  if (state.redPlayer.dataTokens >= MAX_DATA_TOKENS) return 'RED';
+  // HP victories (checked in order so simultaneous 0 HP favors the attacker).
+  if (state.bluePlayer.hp <= 0) return 'RED';
+  if (state.redPlayer.hp <= 0) return 'BLUE';
   return null;
+}
+
+/** Human-readable reason for the current winner (null when no winner yet). */
+export function getWinReason(state: GameState): string | null {
+  if (state.winReason) return state.winReason;
+  const winner = checkWinCondition(state);
+  if (!winner) return null;
+  if (winner === 'RED') {
+    if (state.redPlayer.dataTokens >= MAX_DATA_TOKENS) return 'DATA EXFILTRATED — 3/3 DATA TOKENS';
+    return 'BLUE TEAM HP DEPLETED';
+  }
+  if (state.timeLeftMs <= 0) return 'TIME EXPIRED — NETWORK SECURED';
+  return 'RED TEAM HP DEPLETED';
 }

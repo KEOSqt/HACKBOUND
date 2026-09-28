@@ -1,20 +1,32 @@
 import type { GameState, Team, Card, ChainLink } from './types';
-import { 
-  processTurnStart, processTurnEnd, 
-  checkWinCondition
+import {
+  processTurnStart, processTurnEnd,
+  checkWinCondition, getWinReason
 } from './effects';
-import { selectCard, setValidTargets, setPhase, clearResponseChain, addLogEntry } from './gameState';
-import { canPlayCard } from './rules';
+import { selectCard, setValidTargets, setPhase, clearResponseChain, addLogEntry, tickMatchTimer, startMatchTimer, bumpStat, setWinner } from './gameState';
+import { createInitialGameState } from './gameState';
+import { canPlayCard, isValidResponse } from './rules';
 import { resolveCardEffect } from './effects';
+
+/** Apply a win (if any) with its human-readable reason. */
+function applyWinCheck(state: GameState): GameState {
+  const winner = checkWinCondition(state);
+  if (!winner || state.phase === 'GAME_OVER') return state;
+  let newState = setWinner(state, winner, getWinReason(state));
+  newState = addLogEntry(newState, winner, `${winner} TEAM WINS!`, 'win');
+  return newState;
+}
 
 export function startGame(state: GameState): GameState {
   let newState = setPhase(state, 'GAME_SETUP');
   newState = addLogEntry(newState, 'RED', 'Initializing CYBERCLASH...', 'info');
   newState = addLogEntry(newState, 'BLUE', 'Network topology loaded', 'info');
-  
+
   newState = setPhase(newState, 'RED_TURN');
   newState = processTurnStart(newState, 'RED');
-  
+  newState = startMatchTimer(newState);
+  newState = addLogEntry(newState, 'RED', 'Match timer started (06:00). RED needs 3 Data Tokens; BLUE must survive.', 'info');
+
   return newState;
 }
 
@@ -46,8 +58,14 @@ export function nextTutorialStep(state: GameState): GameState {
 }
 
 export function playCard(state: GameState, card: Card, targetId: string): GameState {
+  if (state.winner || state.phase === 'GAME_OVER') return state;
   const currentTeam = state.currentTurn;
-  
+
+  // No actions during the opponent's turn and no playing the opponent's cards.
+  if (card.team !== currentTeam) {
+    return addLogEntry(state, currentTeam, `Cannot play ${card.name}: not your team's card`, 'info');
+  }
+
   const canPlay = canPlayCard(state, currentTeam, card);
   if (!canPlay.valid) {
     return addLogEntry(state, currentTeam, `Cannot play ${card.name}: ${canPlay.reason}`, 'info');
@@ -65,8 +83,9 @@ export function playCard(state: GameState, card: Card, targetId: string): GameSt
     newState = addToResponseChain(newState, card, currentTeam, targetId);
   } else {
     newState = resolveCardEffect(newState, currentTeam, card, targetId);
+    newState = applyWinCheck(newState);
   }
-  
+
   return newState;
 }
 
@@ -87,12 +106,24 @@ function addToResponseChain(state: GameState, card: Card, player: Team, targetId
 }
 
 export function respondToCard(state: GameState, responseCard: Card, targetId: string): GameState {
+  if (state.winner || state.phase === 'GAME_OVER') return state;
   const currentTeam = state.currentTurn;
   const respondingTeam: Team = currentTeam === 'RED' ? 'BLUE' : 'RED';
-  
+
+  const original = state.responseChain[state.responseChain.length - 1];
+  if (original && !isValidResponse(responseCard, original.card)) {
+    return addLogEntry(state, respondingTeam, `Cannot respond with ${responseCard.name} to ${original.card.name}`, 'info');
+  }
+
   let newState = state;
   newState = resolveCardEffect(newState, respondingTeam, responseCard, targetId);
   newState = addLogEntry(newState, respondingTeam, `RESPONDED with ${responseCard.name}`, 'defense');
+
+  // A resolved response fully negates the chained attack — including exfiltration.
+  if (original && original.card.effect.type === 'EXFILTRATE' && respondingTeam === 'BLUE') {
+    newState = bumpStat(newState, 'BLUE', 'exfilBlocked');
+    newState = addLogEntry(newState, 'BLUE', 'Data exfiltration BLOCKED. No Data Token.', 'defense');
+  }
   
   if (state.responseChain.length > 0) {
     newState = {
@@ -118,32 +149,39 @@ export function passResponse(state: GameState): GameState {
 
 function resolveResponseChain(state: GameState): GameState {
   let newState = state;
-  
+
   if (state.responseChain.length > 0) {
     const lastLink = state.responseChain[state.responseChain.length - 1];
     if (!lastLink.resolved) {
       newState = resolveCardEffect(newState, lastLink.player, lastLink.card, lastLink.targetId);
     }
   }
-  
+
   newState = clearResponseChain(newState);
-  
+  newState = applyWinCheck(newState);
+
   return newState;
 }
 
 export function endTurn(state: GameState): GameState {
+  if (state.winner || state.phase === 'GAME_OVER') return state;
   let newState = state;
   const currentTeam = state.currentTurn;
-  
+
   newState = addLogEntry(newState, currentTeam, 'End turn', 'info');
   newState = processTurnEnd(newState, currentTeam);
-  
-  const winner = checkWinCondition(newState);
-  if (winner) {
-    newState = { ...newState, winner, phase: 'GAME_OVER' };
-    newState = addLogEntry(newState, winner, `${winner} TEAM WINS!`, 'win');
-  }
-  
+  newState = applyWinCheck(newState);
+
+  return newState;
+}
+
+/** Advance the 6-minute match clock. On expiry with RED below 3 tokens, BLUE wins. */
+export function tickMatchClock(state: GameState, deltaMs: number): GameState {
+  const { state: ticked, expired } = tickMatchTimer(state, deltaMs);
+  if (!expired || ticked.winner || ticked.phase === 'GAME_OVER') return ticked;
+  // RED at 3 tokens would already have won; anything less means BLUE survives.
+  let newState = setWinner(ticked, 'BLUE', 'TIME EXPIRED — NETWORK SECURED');
+  newState = addLogEntry(newState, 'BLUE', `TIME! RED has ${ticked.redPlayer.dataTokens}/3 Data Tokens. BLUE TEAM WINS!`, 'win');
   return newState;
 }
 
@@ -172,50 +210,13 @@ export function skipTutorial(state: GameState): GameState {
   return startGame(state);
 }
 
-export function restartGame(_state: GameState): GameState {
-  let newState = createFreshGameState();
-  newState = setPhase(newState, 'MAIN_MENU');
-  return newState;
-}
-
-function createFreshGameState(): GameState {
+export function restartGame(state: GameState): GameState {
+  // Full reset: fresh decks, hands, HP, energy, tokens, timer, network, log.
+  const fresh = createInitialGameState();
   return {
+    ...fresh,
     phase: 'MAIN_MENU',
-    currentTurn: 'RED',
-    turnNumber: 1,
-    redPlayer: {
-      team: 'RED',
-      deck: [],
-      hand: [],
-      discard: [],
-      activeCards: [],
-      energy: 3,
-      maxEnergy: 3,
-      networkIntegrity: 100,
-      score: 0
-    },
-    bluePlayer: {
-      team: 'BLUE',
-      deck: [],
-      hand: [],
-      discard: [],
-      activeCards: [],
-      energy: 3,
-      maxEnergy: 3,
-      networkIntegrity: 100,
-      score: 0
-    },
-    network: [],
-    responseChain: [],
-    responseWindowActive: false,
-    responseWindowTimer: 0,
-    winner: null,
-    log: [],
-    selectedCard: null,
-    validTargets: [],
-    tutorialStep: 0,
-    showTutorial: true,
-    soundEnabled: true,
-    reducedMotion: false
+    soundEnabled: state.soundEnabled,
+    reducedMotion: state.reducedMotion
   };
 }

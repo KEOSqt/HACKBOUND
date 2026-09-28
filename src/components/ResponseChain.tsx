@@ -1,9 +1,11 @@
 import type { GameState, Card } from '../game/types';
+import { isValidResponse } from '../game/rules';
 interface P { state: GameState; onRespond: (c: Card, t: string) => void; onPass: () => void; }
 export function ResponseChain({ state, onRespond, onPass }: P) {
   const defending = state.currentTurn === 'RED' ? 'BLUE' : 'RED';
   const hand = defending === 'RED' ? state.redPlayer.hand : state.bluePlayer.hand;
-  const opts = hand.filter(c => c.effect.type === 'COUNTER' || c.effect.type === 'BLOCK');
+  const original = state.responseChain[state.responseChain.length - 1];
+  const opts = original ? hand.filter(c => isValidResponse(c, original.card)) : [];
   const secs = Math.max(0, Math.ceil(state.responseWindowTimer / 1000));
   return (
     <div className="cc-ov" onClick={onPass}>
