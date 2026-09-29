@@ -20,6 +20,7 @@ export function useGameEngine() {
   const respondWithCard = useCallback((card: any, targetId: string) => gameEngine.respondWithCard(card, targetId), []);
   const passResponse = useCallback(() => gameEngine.passResponse(), []);
   const endTurn = useCallback(() => gameEngine.endTurn(), []);
+  const cycleCard = useCallback((team: 'RED' | 'BLUE', cardId: string) => gameEngine.cycleCard(team, cardId), []);
   const selectCard = useCallback((card: any) => gameEngine.selectCard(card), []);
   const restartGame = useCallback(() => gameEngine.restartGame(), []);
   const toggleSound = useCallback(() => gameEngine.toggleSound(), []);
@@ -34,6 +35,7 @@ export function useGameEngine() {
     respondWithCard,
     passResponse,
     endTurn,
+    cycleCard,
     selectCard,
     restartGame,
     toggleSound,

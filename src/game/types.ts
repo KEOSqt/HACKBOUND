@@ -110,6 +110,8 @@ export interface GameState {
   responseWindowTimer: number;
   winner: Team | null;
   winReason: string | null;
+  /** Once-per-turn discard-to-draw already used this turn. */
+  cycledThisTurn: boolean;
   timeLeftMs: number;
   matchDurationMs: number;
   timerRunning: boolean;

@@ -61,6 +61,48 @@ export function reshuffleDiscardIntoDeck(deck: Card[], discard: Card[]): { newDe
   return { newDeck: [...deck, ...shuffled], newDiscard: [] };
 }
 
+/**
+ * Deal a guaranteed-playable opener: one copy of each base card id in
+ * `guaranteedBaseIds` (matched by id prefix, since deck copies are suffixed),
+ * plus `randomCount` cards off the top. Guarantees both teams open with plays
+ * while keeping the rest of the deal random.
+ */
+export function dealOpeningHand(deck: Card[], guaranteedBaseIds: string[], randomCount: number): { hand: Card[]; deck: Card[] } {
+  let remaining = [...deck];
+  const hand: Card[] = [];
+  for (const baseId of guaranteedBaseIds) {
+    const idx = remaining.findIndex(c => c.id === baseId || c.id.startsWith(`${baseId}_`));
+    if (idx !== -1) {
+      hand.push(remaining[idx]);
+      remaining = remaining.filter((_, i) => i !== idx);
+    }
+  }
+  const { drawn, remainingDeck } = drawCards(remaining, randomCount);
+  return { hand: [...hand, ...drawn], deck: remainingDeck };
+}
+
+function pickRandom<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+/** Base ids for Red's fixed opener: recon + initial access. */
+export function redOpenerIds(): string[] {
+  return ['red_net_scan', pickRandom(['red_phishing', 'red_cred_stuffing'])];
+}
+
+const BLUE_OPENER_POOL = [
+  'blue_firewall', 'blue_mfa', 'blue_access_control', 'blue_rate_limiting',
+  'blue_ids', 'blue_net_monitoring', 'blue_block_ip', 'blue_ips', 'blue_honeypot'
+];
+
+/** Base ids for Blue's fixed opener: 2 distinct prevention picks. */
+export function blueOpenerIds(): string[] {
+  const pool = [...BLUE_OPENER_POOL];
+  const first = pickRandom(pool);
+  const rest = pool.filter(id => id !== first);
+  return [first, pickRandom(rest)];
+}
+
 export function getStartingHandSize(): number {
   return 5;
 }

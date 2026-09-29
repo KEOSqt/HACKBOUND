@@ -3,7 +3,7 @@ import {
   processTurnStart, processTurnEnd,
   checkWinCondition, getWinReason
 } from './effects';
-import { selectCard, setValidTargets, setPhase, clearResponseChain, addLogEntry, tickMatchTimer, startMatchTimer, bumpStat, setWinner } from './gameState';
+import { selectCard, setValidTargets, setPhase, clearResponseChain, addLogEntry, tickMatchTimer, startMatchTimer, bumpStat, setWinner, getPlayer, drawCard, discardCardFromHand } from './gameState';
 import { createInitialGameState } from './gameState';
 import { canPlayCard, isValidResponse } from './rules';
 import { resolveCardEffect } from './effects';
@@ -160,6 +160,35 @@ function resolveResponseChain(state: GameState): GameState {
   newState = clearResponseChain(newState);
   newState = applyWinCheck(newState);
 
+  return newState;
+}
+
+/**
+ * Once-per-turn safety valve against bricked hands: discard 1 hand card to
+ * draw 1. Rejected (with reasons) off-turn, after cycling, after game over,
+ * or with nothing left to draw.
+ */
+export function cycleCard(state: GameState, team: Team, cardId: string): GameState {
+  if (state.winner || state.phase === 'GAME_OVER') return state;
+  if (state.currentTurn !== team) {
+    return addLogEntry(state, team, 'Cannot cycle: not your turn', 'info');
+  }
+  if (state.responseWindowActive) {
+    return addLogEntry(state, team, 'Cannot cycle during a response window', 'info');
+  }
+  if (state.cycledThisTurn) {
+    return addLogEntry(state, team, 'Already cycled this turn', 'info');
+  }
+  const player = getPlayer(state, team);
+  const card = player.hand.find(c => c.id === cardId);
+  if (!card) return state;
+  if (player.deck.length === 0 && player.discard.length === 0) {
+    return addLogEntry(state, team, 'Cannot cycle: no cards left to draw', 'info');
+  }
+  let newState = discardCardFromHand(state, team, cardId);
+  newState = drawCard(newState, team, 1);
+  newState = { ...newState, cycledThisTurn: true };
+  newState = addLogEntry(newState, team, `Cycled ${card.name} for a new card`, 'info');
   return newState;
 }
 

@@ -407,6 +407,7 @@ export function processTurnStart(state: GameState, team: Team): GameState {
   
   newState = setEnergy(newState, team, player.maxEnergy);
   newState = drawCard(newState, team, 1);
+  newState = { ...newState, cycledThisTurn: false };
   
   newState = addLogEntry(newState, team, `Turn ${newState.turnNumber} - ${team} TEAM starts (${player.maxEnergy} energy)`, 'info');
   

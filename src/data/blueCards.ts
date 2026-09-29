@@ -108,7 +108,7 @@ export const BLUE_CARDS: Card[] = [
     cost: 1,
     description: 'Sanitize all user inputs to prevent injection attacks.',
     educationalDescription: 'Input validation (allowlist, encoding, parameterized queries) prevents injection. It\'s a primary OWASP Top 10 defense. Never trust user input.',
-    requirements: [{ type: 'NODE_STATUS', nodeType: 'WEB_SERVER' }],
+    requirements: [],
     effect: {
       type: 'COUNTER',
       target: 'CARD',
@@ -205,7 +205,7 @@ export const BLUE_CARDS: Card[] = [
     cost: 3,
     description: 'Detect and respond to endpoint threats in real-time.',
     educationalDescription: 'EDR monitors endpoint behavior (processes, network, file) for malicious activity. It enables investigation and automated response. Telemetry is key.',
-    requirements: [{ type: 'NODE_STATUS', nodeType: 'ENDPOINT' }],
+    requirements: [],
     effect: {
       type: 'BLOCK',
       target: 'NODE',
@@ -288,7 +288,7 @@ export const BLUE_CARDS: Card[] = [
     cost: 2,
     description: 'Invalidate compromised authentication tokens.',
     educationalDescription: 'Credential rotation and revocation limit attacker access. Short token lifetimes and automated rotation reduce exposure.',
-    requirements: [{ type: 'NODE_STATUS', nodeType: 'AUTH_SERVER' }],
+    requirements: [],
     effect: {
       type: 'HEAL',
       target: 'NODE',

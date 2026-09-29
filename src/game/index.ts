@@ -5,9 +5,9 @@ export * from './rules';
 export * from './effects';
 export * from './turnManager';
 
-import type { GameState, Card } from './types';
+import type { GameState, Card, Team } from './types';
 import { createInitialGameState } from './gameState';
-import { startGame, startTutorial, playCard, respondToCard, passResponse, endTurn, skipTutorial, restartGame, updateResponseTimer, tickMatchClock } from './turnManager';
+import { startGame, startTutorial, playCard, respondToCard, passResponse, endTurn, cycleCard, skipTutorial, restartGame, updateResponseTimer, tickMatchClock } from './turnManager';
 import { getValidTargets, canPlayCard } from './rules';
 
 export class GameEngine {
@@ -72,8 +72,15 @@ export class GameEngine {
   endTurn(): void {
     if (this.state.phase !== 'RED_TURN' && this.state.phase !== 'BLUE_TURN') return;
     if (this.state.responseWindowActive) return;
-    
+
     this.setState(endTurn(this.state));
+  }
+
+  cycleCard(team: Team, cardId: string): void {
+    if (this.state.phase !== 'RED_TURN' && this.state.phase !== 'BLUE_TURN') return;
+    if (this.state.responseWindowActive) return;
+
+    this.setState(cycleCard(this.state, team, cardId));
   }
 
   selectCard(card: Card | null): void {

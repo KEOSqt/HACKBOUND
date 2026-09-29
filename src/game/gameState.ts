@@ -1,7 +1,7 @@
 import type { GameState, PlayerState, PlayerStats, NetworkNode, Team, GamePhase, Card, LogEntry, ChainLink } from './types';
 import { MATCH_DURATION_MS, MAX_DATA_TOKENS } from './types';
 import { createNetwork } from '../data/network';
-import { createDecks } from './deck';
+import { createDecks, dealOpeningHand, redOpenerIds, blueOpenerIds } from './deck';
 import { getNode as getNodeUtil, getConnectedNodes as getConnectedNodesUtil } from '../data/network';
 
 function generateId(): string {
@@ -19,9 +19,12 @@ export function getConnectedNodes(state: GameState, nodeId: string): NetworkNode
 export function createInitialGameState(): GameState {
   const { red, blue } = createDecks();
   const network = createNetwork();
-  
-  const redDrawn = red.slice(0, 5);
-  const blueDrawn = blue.slice(0, 5);
+
+  // Fixed + random openers: 2 guaranteed turn-1 plays + 3 random each.
+  const redOpen = dealOpeningHand(red, redOpenerIds(), 3);
+  const blueOpen = dealOpeningHand(blue, blueOpenerIds(), 3);
+  const redDrawn = redOpen.hand;
+  const blueDrawn = blueOpen.hand;
   
   const freshStats = (): PlayerStats => ({
     successfulAttacks: 0,
@@ -37,7 +40,7 @@ export function createInitialGameState(): GameState {
     turnNumber: 1,
     redPlayer: {
       team: 'RED',
-      deck: red.slice(5),
+      deck: redOpen.deck,
       hand: redDrawn,
       discard: [],
       activeCards: [],
@@ -52,7 +55,7 @@ export function createInitialGameState(): GameState {
     },
     bluePlayer: {
       team: 'BLUE',
-      deck: blue.slice(5),
+      deck: blueOpen.deck,
       hand: blueDrawn,
       discard: [],
       activeCards: [],
@@ -71,6 +74,7 @@ export function createInitialGameState(): GameState {
     responseWindowTimer: 0,
     winner: null,
     winReason: null,
+    cycledThisTurn: false,
     timeLeftMs: MATCH_DURATION_MS,
     matchDurationMs: MATCH_DURATION_MS,
     timerRunning: false,

@@ -83,23 +83,32 @@ function HandCol({ team, cards, state, active, selectedId, onPick }: {
 }
 
 export default function App() {
-  const { state, startGame, startTutorial, skipTutorial, playCard, respondWithCard, passResponse, endTurn, selectCard, restartGame, toggleSound } = useGameEngine();
+  const { state, startGame, startTutorial, skipTutorial, playCard, respondWithCard, passResponse, endTurn, cycleCard, selectCard, restartGame, toggleSound } = useGameEngine();
+  const [cycleArmed, setCycleArmed] = useState(false);
   const sel = state.selectedCard;
   const isRed = state.currentTurn === 'RED';
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && sel) selectCard(null);
+      if (e.key === 'Escape' && cycleArmed) setCycleArmed(false);
       if (e.key === ' ' && (state.phase === 'RED_TURN' || state.phase === 'BLUE_TURN')) { e.preventDefault(); endTurn(); }
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
-  }, [sel, state.phase, selectCard, endTurn]);
+  }, [sel, cycleArmed, state.phase, selectCard, endTurn]);
 
   if (state.phase === 'MAIN_MENU') return <div className="cc-app"><MainMenu onStartGame={startGame} onStartTutorial={startTutorial} /></div>;
   if (state.phase === 'TUTORIAL') return <div className="cc-app"><Tutorial state={state} onNext={skipTutorial} onSkip={skipTutorial} /></div>;
 
   const onPick = (c: Card) => {
+    // Cycle mode: clicking a hand card discards it to draw a new one.
+    if (cycleArmed) {
+      if (c.team === state.currentTurn) cycleCard(state.currentTurn, c.id);
+      setCycleArmed(false);
+      selectCard(null);
+      return;
+    }
     if (sel?.id === c.id) { selectCard(null); return; }
     // Instant cards that can't legally resolve select-and-explain instead of
     // auto-firing into an engine rejection (the old "Cannot play" log spam).
@@ -155,9 +164,9 @@ export default function App() {
         const me = state.currentTurn === 'RED' ? state.redPlayer : state.bluePlayer;
         const pick = step.card ? me.hand.find(c => c.id === step.card!.id) ?? null : null;
         return (
-          <div className="coach" onClick={() => { if (pick) onPick(pick); }}
-            title={pick ? `Play ${pick.name}` : 'End your turn'}>
-            <span className="coach-next">💡 {step.text}</span>
+          <div className="coach" onClick={() => { if (!cycleArmed && pick) onPick(pick); }}
+            title={cycleArmed ? 'Click a card in your hand to swap it' : pick ? `Play ${pick.name}` : 'End your turn'}>
+            <span className="coach-next">{cycleArmed ? '🔄 CYCLE MODE — click one of your hand cards to swap it for a new one' : `💡 ${step.text}`}</span>
             <span className="coach-stages">
               {CHAIN_STAGES.map((s, i) => (
                 <span key={s} className={`cst ${i < stage ? 'done' : i === stage ? 'now' : 'todo'}`}>{s}</span>
@@ -224,7 +233,11 @@ export default function App() {
               </div>
             ))}
           </div>
-          <button className={`cc-endbtn ${isRed ? 'red' : 'blue'}`} onClick={endTurn}
+          <button className={`cc-endbtn ${isRed ? 'red' : 'blue'}`} onClick={() => { setCycleArmed(a => !a); }}
+            disabled={state.responseWindowActive || state.cycledThisTurn || state.phase === 'GAME_OVER'}
+            title={state.cycledThisTurn ? 'Already cycled this turn' : 'Discard 1 card to draw 1 (once per turn)'}
+            style={{ flex: '0 0 118px' }}>🔄 {cycleArmed ? 'PICK CARD' : 'CYCLE'}</button>
+          <button className={`cc-endbtn ${isRed ? 'red' : 'blue'}`} onClick={() => { setCycleArmed(false); endTurn(); }}
             disabled={state.responseWindowActive}>END TURN</button>
         </div>
 
